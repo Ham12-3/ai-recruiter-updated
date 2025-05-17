@@ -27,6 +27,8 @@ export const createInterviewAssistant = async (interviewData: {
   role: string;
   level: string;
   techstack: string[];
+  userName: string;  // Added userName parameter
+  userId: string;    // Added userId parameter
 }) => {
   // Format the questions for the prompt
   const formattedQuestions = interviewData.questions.join("\n- ");
@@ -48,14 +50,14 @@ export const createInterviewAssistant = async (interviewData: {
       style: 0.5,
       useSpeakerBoost: true,
     },
-    firstMessage: `Hello! I'll be conducting your interview for the ${interviewData.role} position today. Let's get started.`,
+    firstMessage: `Hello ${interviewData.userName}! I'll be conducting your interview for the ${interviewData.role} position today. Let's get started.`,
     model: {
       provider: "openai",
       model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: `You are a professional job interviewer conducting a real-time voice interview for a ${
+          content: `You are a professional job interviewer conducting a real-time voice interview with ${interviewData.userName} (user ID: ${interviewData.userId}) for a ${
             interviewData.level
           } ${interviewData.role} position.
 
@@ -65,6 +67,7 @@ Ask the following questions in a conversational manner, one at a time:
 - ${formattedQuestions}
 
 Interview Guidelines:
+- Address the candidate by name (${interviewData.userName})
 - Listen actively to responses and acknowledge them before moving forward
 - Ask follow-up questions if a response is vague or requires more detail
 - Keep the conversation flowing naturally
@@ -76,7 +79,6 @@ Conclude the interview by thanking the candidate for their time.`,
         },
       ],
     },
-    // Add these required properties
     clientMessages: [],
     serverMessages: []
   });

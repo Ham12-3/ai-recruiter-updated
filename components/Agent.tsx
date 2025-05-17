@@ -1,6 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { vapi } from "@/lib/vapi.sdk";
+import { createInterviewAssistant, vapi } from "@/lib/vapi.sdk";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -60,6 +60,54 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
   useEffect(() => {
     if (callStatus === CallStatus.FINISHED) router.push("/");
   }, [messages, callStatus, type, userId]);
+
+  const handleCall = async () => {
+    try {
+      setCallStatus(CallStatus.CONNECTING);
+
+      // Check if userId is defined before proceeding
+      if (!userId) {
+        console.error("User ID is required to start the interview");
+        setCallStatus(CallStatus.INACTIVE);
+        return;
+      }
+
+      const interviewData = {
+        questions: [
+          "Tell me about your experience with web development.",
+          "How do you approach learning new technologies?",
+          "Can you describe a challenging project you've worked on recently?",
+          "What are your strengths as a developer?",
+          "Do you have any questions about the position?",
+        ],
+        role: "Full Stack Developer",
+        level: "Mid-level",
+        techstack: ["React", "TypeScript", "Node.js"],
+        userName,
+        userId, // Now TypeScript knows userId is not undefined
+      };
+
+      await createInterviewAssistant(interviewData);
+    } catch (error) {
+      console.error("Error starting interview:", error);
+      setCallStatus(CallStatus.INACTIVE);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      setCallStatus(CallStatus.FINISHED);
+      await vapi.stop();
+    } catch (error) {
+      console.error("Error stopping interview:", error);
+    }
+  };
+
+  const latestMessage = messages[messages.length - 1]?.content || "";
+
+  const isCallInactiveOrFinished =
+    callStatus === CallStatus.INACTIVE || callStatus === CallStatus.FINISHED;
+
   return (
     <>
       <div className="call-view">
@@ -97,34 +145,32 @@ const Agent = ({ userName, userId, type }: AgentProps) => {
         <div className="transcript-border">
           <div className="transcript">
             <p
-              key={lastMessage}
+              key={latestMessage}
               className={cn(
                 "transition-opacity duration-500 opacity-0",
                 "animate-fadeIn opacity-100"
               )}
             >
-              {lastMessage}
+              {latestMessage}
             </p>
           </div>
         </div>
       )}
       <div className="w-full flex justify-center">
         {callStatus !== "ACTIVE" ? (
-          <button className="relative btn-call">
+          <button className="relative btn-call" onClick={handleCall}>
             <span
               className={cn(
                 "absolute animate-ping rounded-full opacity-75",
-                (callStatus !== "CONNECTING") & "hidden"
+                callStatus !== "CONNECTING" && "hidden"
               )}
             />
-            <span>
-              {callStatus === "INACTIVE" || status === CallStatus.FINISHED
-                ? "Call"
-                : ". . ."}
-            </span>
+            <span>{isCallInactiveOrFinished ? "Call" : ". . ."}</span>
           </button>
         ) : (
-          <button className="btn-disconnect">End</button>
+          <button className="btn-disconnect" onClick={handleDisconnect}>
+            End
+          </button>
         )}
       </div>
     </>
