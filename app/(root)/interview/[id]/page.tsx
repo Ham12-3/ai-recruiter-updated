@@ -6,15 +6,28 @@ import { getRandomInterviewCover } from "@/lib/utils";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import React from "react";
+import { dummyInterviews } from "@/constants"; // Import dummy data
 
 const Page = async ({ params }: RouteParams) => {
   const { id } = await params;
-
   const user = await getCurrentUser();
 
-  const interview = await getInterviewById(id);
+  // Try to get the real interview
+  let interview = await getInterviewById(id);
 
-  if (!interview) redirect("/");
+  // If not found, try to find a matching dummy interview
+  if (!interview) {
+    const dummyInterview = dummyInterviews.find((dummy) => dummy.id === id);
+
+    if (dummyInterview) {
+      // Use the dummy interview data
+      interview = dummyInterview;
+    } else {
+      // If no matching dummy interview either, redirect home
+      redirect("/");
+    }
+  }
+
   return (
     <>
       <div className="flex flex-row gap-4 justify-between">
@@ -37,8 +50,8 @@ const Page = async ({ params }: RouteParams) => {
       </div>
 
       <Agent
-        userName={user?.name || ""}
-        userId={user?.id}
+        userName={user?.name || "User"}
+        userId={user?.id || "dummy-user-id"}
         interviewId={id}
         type="interview"
         questions={interview.questions}
