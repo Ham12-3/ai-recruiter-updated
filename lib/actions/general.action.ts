@@ -153,3 +153,24 @@ export async function getFeedbackByInterviewId({
     return null;
   }
 }
+
+// Add this new function to get all feedback for a user
+export async function getAllUserFeedback(userId: string): Promise<Feedback[]> {
+  try {
+    const feedbackSnapshot = await db
+      .collection("feedback")
+      .where("userId", "==", userId)
+      .orderBy("createdAt", "desc")
+      .get();
+
+    if (feedbackSnapshot.empty) return [];
+
+    return feedbackSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Feedback[];
+  } catch (error) {
+    console.error("Error getting user feedback:", error);
+    return [];
+  }
+}

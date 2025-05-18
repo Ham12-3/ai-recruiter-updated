@@ -292,6 +292,26 @@
       @apply text-sm font-semibold capitalize;
     }
   }
+
+  .feedback-section {
+    @apply flex flex-wrap gap-4 max-lg:flex-col w-full items-stretch;
+  }
+
+  .feedback-card {
+    @apply dark-gradient rounded-2xl min-h-full flex flex-col p-6 relative overflow-hidden gap-4 justify-between border border-transparent transition-all duration-200 hover:-translate-y-1;
+  }
+
+  .feedback-card:hover {
+    @apply border-primary-200/50 shadow-lg shadow-dark-100/30;
+  }
+
+  .feedback-card .score-badge {
+    @apply flex items-center px-3 py-1 rounded-full bg-primary-200/20 text-primary-200;
+  }
+
+  .feedback-card .card-actions {
+    @apply flex justify-end mt-auto pt-2;
+  }
 }
 
 @utility dark-gradient {

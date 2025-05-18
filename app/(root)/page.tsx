@@ -1,10 +1,12 @@
 import InterviewCard from "@/components/InterviewCard";
+import FeedbackCard from "@/components/FeedbackCard";
 import { Button } from "@/components/ui/button";
 
 import { getCurrentUser } from "@/lib/actions/auth.action";
 import {
   getInterviewsByUserId,
   getLatestInterviews,
+  getAllUserFeedback,
 } from "@/lib/actions/general.action";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,11 +18,13 @@ import { dummyInterviews } from "@/constants";
 const Page = async () => {
   const user = await getCurrentUser();
 
-  // Get interviews with proper null handling
-  const fetchedUserInterviews = await getInterviewsByUserId(user?.id || "");
-  const fetchedLatestInterviews = await getLatestInterviews({
-    userId: user?.id || "",
-  });
+  // Get interviews and feedback with proper null handling
+  const [fetchedUserInterviews, fetchedLatestInterviews, userFeedback] =
+    await Promise.all([
+      getInterviewsByUserId(user?.id || ""),
+      getLatestInterviews({ userId: user?.id || "" }),
+      getAllUserFeedback(user?.id || ""),
+    ]);
 
   // Create safe arrays that can't be null by using null coalescing operator
   const userInterviews =
@@ -33,14 +37,10 @@ const Page = async () => {
       ? fetchedLatestInterviews
       : dummyInterviews;
 
-  // Server-side logging
-  console.log("User ID:", user?.id);
-  console.log("User Interviews:", userInterviews);
-  console.log("Latest Interviews:", latestInterviews);
-
   // Now TypeScript knows these are always arrays
   const hasPastInterviews = userInterviews.length > 0;
   const hasUpcomingInterviews = latestInterviews.length > 0;
+  const hasFeedback = userFeedback.length > 0;
 
   return (
     <>
@@ -94,6 +94,33 @@ const Page = async () => {
             ))
           ) : (
             <p>You haven't taken any interviews yet</p>
+          )}
+        </div>
+      </section>
+      <section className="flex flex-col gap-6 mt-8">
+        <h2>Your Interview Feedback</h2>
+        <div className="feedback-section">
+          {hasFeedback ? (
+            userFeedback.map((feedback) => {
+              // Find matching interview to get role information
+              const relatedInterview = userInterviews.find(
+                (interview) => interview.id === feedback.interviewId
+              );
+
+              return (
+                <FeedbackCard
+                  key={feedback.id}
+                  id={feedback.id}
+                  interviewId={feedback.interviewId}
+                  totalScore={feedback.totalScore}
+                  finalAssessment={feedback.finalAssessment}
+                  createdAt={feedback.createdAt}
+                  role={relatedInterview?.role || "Interview"}
+                />
+              );
+            })
+          ) : (
+            <p>No feedback available yet</p>
           )}
         </div>
       </section>
