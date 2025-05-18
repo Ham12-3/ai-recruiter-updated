@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 // Import the interviewer configuration from constants
-import { interviewer } from "@/constants";
+import { dummyInterviews, interviewer } from "@/constants";
 import { createFeedback } from "@/lib/actions/general.action";
 
 enum CallStatus {
@@ -67,19 +67,58 @@ const Agent = ({
   }, []);
 
   const handleGenerateFeedback = async (messages: SavedMessage[]) => {
-    console.log("genrate feedback here");
+    console.log("generate feedback here");
+
+    // For dummy interviews, generate feedback with Gemini
+    if (
+      interviewId &&
+      dummyInterviews.some((interview) => interview.id === interviewId)
+    ) {
+      try {
+        console.log(
+          "Calling /api/generate-feedback with transcript:",
+          messages.length,
+          "messages"
+        );
+
+        // Call your API endpoint that uses Gemini
+        const response = await fetch("/api/generate-feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript: messages }),
+        });
+
+        if (!response.ok) {
+          console.error(
+            "Error response from generate-feedback:",
+            response.status,
+            response.statusText
+          );
+          const errorText = await response.text();
+          console.error("Error details:", errorText);
+          throw new Error(`Failed to generate feedback: ${response.status}`);
+        }
+
+        // Get the feedback data
+        const feedbackData = await response.json();
+        console.log("Received feedback data:", feedbackData);
+
+        // Save to database
+        // Rest of your code...
+      } catch (error) {
+        console.error("Error in API call:", error);
+      }
+    }
+
+    // For real interviews (existing code)
     const { success, feedbackId: id } = await createFeedback({
       interviewId: interviewId!,
       userId: userId!,
       transcript: messages,
+      isDummy: false,
     });
 
-    if (success && id) {
-      router.push(`interview/${interviewId}/feedback`);
-    } else {
-      console.log("Error saving feedback");
-      router.push("/");
-    }
+    // Rest of your existing code...
   };
 
   useEffect(() => {

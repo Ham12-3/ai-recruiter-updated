@@ -45,10 +45,32 @@ export async function getInterviewById(id: string): Promise<Interview | null> {
   return interview.data() as Interview | null;
 }
 
-export async function createFeedback(params: CreateFeedbackParams) {
-  const { interviewId, userId, transcript } = params;
-
+export async function createFeedback({
+  interviewId,
+  userId,
+  transcript,
+  isDummy = false,
+  preGeneratedFeedback = null,
+}: CreateFeedbackParams) {
   try {
+    // If we have pre-generated feedback (from Gemini for dummy interviews)
+    if (preGeneratedFeedback) {
+      // Store the pre-generated feedback directly
+      const feedbackRef = await db.collection("feedback").add({
+        interviewId,
+        userId,
+        transcript,
+        isDummy, // Store this flag to identify dummy feedback
+        ...preGeneratedFeedback, // Spread the pre-generated feedback
+        createdAt: new Date(),
+      });
+
+      return { success: true, feedbackId: feedbackRef.id };
+    }
+
+    // If it's a real interview, continue with your existing logic
+    // to generate feedback from transcript and save it
+
     const formattedTranscript = transcript
       .map(
         (sentence: { role: string; content: string }) =>
@@ -101,32 +123,33 @@ export async function createFeedback(params: CreateFeedbackParams) {
       feedbackId: feedback.id,
     };
   } catch (error) {
-    console.error("Error saving feedback", error);
-    return {
-      success: false,
-      message: "Error saving feedback",
-    };
+    console.error("Error creating feedback:", error);
+    return { success: false, feedbackId: null };
   }
 }
 
-export async function getFeedbackByInterviewId(
-  params: GetFeedbackByInterviewIdParams
-): Promise<Feedback | null> {
-  const { interviewId, userId } = params;
-  const feedback = await db
-    .collection("feedback")
-    .where("interviewId", "==", interviewId)
-    .where("userId", "==", userId)
-    .limit(1)
+export async function getFeedbackByInterviewId({
+  interviewId,
+  userId,
+}: GetFeedbackByInterviewIdParams): Promise<Feedback | null> {
+  try {
+    // Query will now work for both real and dummy feedback
+    const feedbackSnapshot = await db
+      .collection("feedback")
+      .where("interviewId", "==", interviewId)
+      .where("userId", "==", userId)
+      .limit(1)
+      .get();
 
-    .get();
+    if (feedbackSnapshot.empty) return null;
 
-  if (feedback.empty) return null;
-
-  const feedbackDoc = feedback.docs[0];
-
-  return {
-    id: feedbackDoc.id,
-    ...feedbackDoc.data(),
-  } as Feedback;
+    const feedback = feedbackSnapshot.docs[0].data();
+    return {
+      id: feedbackSnapshot.docs[0].id,
+      ...feedback,
+    } as Feedback;
+  } catch (error) {
+    console.error("Error getting feedback:", error);
+    return null;
+  }
 }

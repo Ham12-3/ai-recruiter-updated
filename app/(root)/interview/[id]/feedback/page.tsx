@@ -9,22 +9,46 @@ import { redirect } from "next/navigation";
 import React from "react";
 import Image from "next/image";
 import dayjs from "dayjs";
+import { dummyInterviews } from "@/constants"; // Just import dummyInterviews
 
 const Page = async ({ params }: RouteParams) => {
   const { id } = await params;
-
   const user = await getCurrentUser();
 
-  const interview = await getInterviewById(id);
+  // Try to get the real interview
+  let interview = await getInterviewById(id);
+  let feedback = null;
 
-  if (!interview) redirect("/");
+  // If it's a real interview or dummy interview, get feedback from database
+  if (interview || dummyInterviews.some((dummy) => dummy.id === id)) {
+    // For dummy interviews, we'll find it first
+    if (!interview) {
+      interview = dummyInterviews.find((dummy) => dummy.id === id)!;
+    }
 
-  const feedback = await getFeedbackByInterviewId({
-    interviewId: id,
-    userId: user?.id!,
-  });
+    // Get feedback from database for both real and dummy interviews
+    feedback = await getFeedbackByInterviewId({
+      interviewId: id,
+      userId: user?.id || "dummy-user",
+    });
+  } else {
+    // Neither real nor dummy interview found
+    redirect("/");
+  }
 
-  console.log("feedback", feedback);
+  // If no feedback found, redirect to the interview page to take it first
+  if (!feedback) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-8 py-20">
+        <h2>No feedback found for this interview</h2>
+        <p>You need to complete the interview first to get feedback.</p>
+        <Button className="btn-primary">
+          <Link href={`/interview/${id}`}>Take Interview</Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <section className="section-feedback">
       <div className="flex flex-row justify-center">
